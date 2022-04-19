@@ -13,12 +13,13 @@ public:
         kOtherRefsRemained,//还有其他引用
     };
     void AddRef(){
-        //Add完成后，其他线程才能读
+        //该线程 AddRef前后的读写操作不进行限制
         m_ref_count.fetch_add(1, std::memory_order_relaxed);
     }
     RefCountStatus DecRef(){
-        //应该确保-1完成，其他线程才能读
-        m_ref_count.fetch_sub(1, std::memory_order_acq_rel)-1;
+        int refcout = m_ref_count.fetch_sub(1, std::memory_order_acq_rel)-1;
+        return refcout == 0 ? RefCountStatus::kDroppedLastRef
+                            :RefCountStatus::kOtherRefsRemained;
     }
 
 private:
